@@ -1,0 +1,13 @@
+[Unit]
+Description=Test Cluster Manager service
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/cmserver start
+ExecStop=/usr/sbin/cmserver stop
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
