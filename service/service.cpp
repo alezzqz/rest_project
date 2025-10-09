@@ -7,7 +7,11 @@
 
 #include "service.h"
 
+#include "logger/logger.h"
+
 namespace service {
+
+extern logger::logger& log();
 
 using namespace std;
 
@@ -18,7 +22,7 @@ service::service(const std::string& pid_file_path)
 service_start_result service::start() {
     pid_t pid = fork();
     if (pid < 0) {
-        cout << "can't create new process" << endl;
+        logger::logger::get("cmserver").log(LOG_INFO, "can't create new process");
         return failed;
     }
 
@@ -48,17 +52,17 @@ service_start_result service::start() {
 void service::stop() {
     pid_t pid = _pid_file.get_pid();
     if (pid == 0) {
-        cout << "not started" << endl;
+        log().info("service not started");
         return;
     }
 
     if (kill(pid, SIGTERM) == 0) {
-        cout << "stop signal sent" << endl;
+        log().info("stop signal sent");
         bool stopped = false;
 
         for (int i = 0; i < 10; ++i) {
             if (kill(pid, 0) != 0) {
-                cout << "stopped" << endl;
+                log().info("stopped");
                 stopped = true;
                 break;
             }
@@ -66,13 +70,13 @@ void service::stop() {
         }
 
         if (!stopped) {
-            cout << "SIGTERM wasn't processed, use SIGKILL" << endl;
+            log().info("SIGTERM wasn't processed, use SIGKILL");
             kill(pid, SIGKILL);
             sleep(1);
         }
         _pid_file.remove();
     } else {
-        cout << "couldn't stop process" << endl;
+        log().error("couldn't stop process");
     }
 }
 

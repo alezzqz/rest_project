@@ -6,24 +6,34 @@
 
 #include "pid_file.h"
 
+#include "logger/logger.h"
+
 namespace service {
 
 using namespace std;
 
+logger::logger& log() {
+    return logger::logger::get("cmserver");
+}
+
 void pid_file::create(pid_t pid) {
+    log().debug("creating pid file {}", _path);
+
     ofstream file(_path);
     if (file.is_open()) {
         file << pid << std::endl;
         file.close();
         chmod(_path.c_str(), 0644);
     } else {
-        syslog(LOG_ERR, "can't create pid file: %s", _path.c_str());
+        log().error("can't create pid file: {}", _path);
     }
 }
 
 void pid_file::remove() {
+    log().debug("removing pid file {}", _path);
+
     if (filesystem::remove(_path.c_str()) == false) {
-        syslog(LOG_ERR, "can't remove pid file: %s", _path.c_str());
+        log().error("can't remove pid file: {}", _path);
     }
 }
 

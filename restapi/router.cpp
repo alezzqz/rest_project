@@ -1,6 +1,14 @@
 #include "router.h"
 #include <iostream>
 
+#include "logger/logger.h"
+
+namespace restapi {
+
+logger::logger& log() {
+    return logger::logger::get("cmserver");
+}
+
 api_router::api_router() {
     // add basic routes here
 }
@@ -12,7 +20,7 @@ void api_router::add_route(http::verb method, const std::string& pattern, Handle
 
 std::shared_ptr<http::response<http::string_body>> 
 api_router::request_handler(http::request<http::string_body>&& req) {
-    std::cout << "Request: " << req.method() << " " << req.target() << std::endl;
+    log().debug("Request: {} {}", boost::beast::http::to_string(req.method()).to_string(), req.target().to_string());
     
     auto method_it = routes_.find(req.method());
     if (method_it == routes_.end()) {
@@ -53,3 +61,5 @@ std::shared_ptr<http::response<http::string_body>>
 api_router::method_not_allowed_response(const http::request<http::string_body>& req) {
     return create_response(http::status::method_not_allowed, "The requested method is not supported for this resource", "text/plain");
 }
+
+};

@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <regex>
 
+namespace restapi {
+
 namespace beast = boost::beast;
 namespace http = beast::http;
 
@@ -39,4 +41,6 @@ private:
     
     std::shared_ptr<http::response<http::string_body>> 
     method_not_allowed_response(const http::request<http::string_body>& req);
+};
+
 };

@@ -5,18 +5,13 @@
 #include "restapi/router.h"
 #include "restapi/server.h"
 #include "service/service.h"
+#include "logger/logger.h"
 
 using namespace std;
 
-class syslog_init {
-public:
-    syslog_init() {
-        openlog("cmserver", LOG_PID | LOG_NDELAY, LOG_USER);
-    }
-    ~syslog_init() {
-        closelog();
-    }
-};
+logger::logger& log() {
+    return logger::logger::get("cmserver");
+}
 
 void msg(const char* msg) {
     //cout << msg << endl;
@@ -28,21 +23,21 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    syslog_init sl;
+    //syslog_init sl;
     std::string cmd = argv[1];
     service::service srv("/var/run/cmservice.pid");
 
     if (cmd == "start") {
         auto res = srv.start();
         if (res == service::failed) {
-            msg("couldn't start service");
+            log().error("couldn't start service");
             return 1;
         }
         if (res == service::parent) {
             return 0;
         }
 
-        api_server server("0.0.0.0", 8080, 4);
+        restapi::api_server server("0.0.0.0", 8080, 4);
         auto router = server.get_router();
 
         router->add_route(boost::beast::http::verb::get, "/api",
@@ -59,17 +54,17 @@ int main(int argc, char** argv) {
             });
 
         thread api_thread([&server]{
-            msg("api server starting...");
+            log().info("REST API server starting...");
             server.run();
-            msg("api server stopped");
+            log().info("REST API server stopped");
         });
         
-        msg("test server started");
+        log().info("service started");
         srv.wait();
-        msg("stopping api server...");
+        log().info("stopping REST API server...");
         server.stop();
         api_thread.join();
-        msg("test server finished");
+        log().info("stopped");
     } else if (cmd == "stop") {
         srv.stop();
         return 0;
@@ -84,7 +79,7 @@ int main(int argc, char** argv) {
         // }
         return 0;
     } else {
-        cout << "unknown command" << endl;
+        cout << "Unknown command. Use [start|stop]" << endl;
         return 2;
     }
     return 0;
