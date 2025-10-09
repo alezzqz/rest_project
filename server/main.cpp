@@ -19,8 +19,8 @@ public:
 };
 
 void msg(const char* msg) {
-    cout << msg << endl;
-    //syslog(LOG_INFO, "%s", msg);
+    //cout << msg << endl;
+    syslog(LOG_INFO, "%s", msg);
 }
 
 int main(int argc, char** argv) {
@@ -33,12 +33,20 @@ int main(int argc, char** argv) {
     service::service srv("/var/run/cmservice.pid");
 
     if (cmd == "start") {
-        srv.start();
+        auto res = srv.start();
+        if (res == service::failed) {
+            msg("couldn't start service");
+            return 1;
+        }
+        if (res == service::parent) {
+            return 0;
+        }
+
         api_server server("0.0.0.0", 8080, 4);
         auto router = server.get_router();
 
         router->add_route(boost::beast::http::verb::get, "/api",
-            [](const auto& req, const auto& match) {               
+            [](const auto& req, const auto& match) {
                 auto resp = std::make_shared<boost::beast::http::response<boost::beast::http::string_body>>();
                 resp->version(11);
                 resp->result(boost::beast::http::status::ok);
@@ -51,13 +59,12 @@ int main(int argc, char** argv) {
             });
 
         thread api_thread([&server]{
-            msg("api server thread started");
+            msg("api server starting...");
             server.run();
-            msg("api server thread finished");
+            msg("api server stopped");
         });
         
         msg("test server started");
-        //stop_sig.wait();
         srv.wait();
         msg("stopping api server...");
         server.stop();

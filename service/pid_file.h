@@ -8,7 +8,7 @@ class pid_file {
     std::string _path;
 
 public:
-    pid_file(const std::string& path = "/var/run/cmservice.pid")
+    pid_file(const std::string& path)
         : _path(path) {
     }
 
