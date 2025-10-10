@@ -1,0 +1,5 @@
+# cmserver config YAML
+
+api_threads: 2
+api_http_address: 0.0.0.0
+api_http_port: 8090

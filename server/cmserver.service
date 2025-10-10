@@ -3,7 +3,7 @@ Description=Test Cluster Manager service
 
 [Service]
 Type=forking
-ExecStart=/usr/sbin/cmserver start
+ExecStart=/usr/sbin/cmserver start --config-file=/etc/cmserver/cmserver.yaml
 ExecStop=/usr/sbin/cmserver stop
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=always

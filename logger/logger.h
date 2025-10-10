@@ -6,12 +6,12 @@
 namespace logger {
 
 class logger {
-public:
     logger(const char* ident);
     ~logger() {
         closelog();
     }
 
+public:
     template<typename... Args>
     void log(int priority, const char* format, Args&&... args) const {
         auto message = fmt::format(fmt::runtime(format), std::forward<Args>(args)...);

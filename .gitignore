@@ -40,8 +40,10 @@
 # debug information files
 *.dwo
 
+build/
 CMakeFiles/
 CMakeCache.txt
 Makefile
 *.cmake
 cmserver
+.vscode

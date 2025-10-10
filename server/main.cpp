@@ -1,13 +1,16 @@
-#include <syslog.h>
-#include <sys/stat.h>
 #include <iostream>
+#include <yaml-cpp/yaml.h>
+#include <boost/program_options.hpp>
+#include <boost/range/algorithm.hpp>
 
 #include "restapi/router.h"
 #include "restapi/server.h"
 #include "service/service.h"
 #include "logger/logger.h"
+#include "config.h"
 
 using namespace std;
+namespace po = boost::program_options;
 
 logger::logger& log() {
     return logger::logger::get("cmserver");
@@ -18,29 +21,8 @@ void msg(const char* msg) {
     syslog(LOG_INFO, "%s", msg);
 }
 
-int main(int argc, char** argv) {
-    if (argc < 2) {
-        return 1;
-    }
-
-    //syslog_init sl;
-    std::string cmd = argv[1];
-    service::service srv("/var/run/cmservice.pid");
-
-    if (cmd == "start") {
-        auto res = srv.start();
-        if (res == service::failed) {
-            log().error("couldn't start service");
-            return 1;
-        }
-        if (res == service::parent) {
-            return 0;
-        }
-
-        restapi::api_server server("0.0.0.0", 8080, 4);
-        auto router = server.get_router();
-
-        router->add_route(boost::beast::http::verb::get, "/api",
+void setup_api_routes(std::shared_ptr<restapi::api_router> router) {
+    router->add_route(boost::beast::http::verb::get, "/api",
             [](const auto& req, const auto& match) {
                 auto resp = std::make_shared<boost::beast::http::response<boost::beast::http::string_body>>();
                 resp->version(11);
@@ -52,35 +34,88 @@ int main(int argc, char** argv) {
                 resp->prepare_payload();
                 return resp;
             });
+}
 
-        thread api_thread([&server]{
-            log().info("REST API server starting...");
-            server.run();
-            log().info("REST API server stopped");
-        });
-        
-        log().info("service started");
-        srv.wait();
-        log().info("stopping REST API server...");
-        server.stop();
-        api_thread.join();
-        log().info("stopped");
-    } else if (cmd == "stop") {
+int on_start(const po::variables_map& vm, service::service& srv) {
+    config cfg;
+    try {
+        cfg.read(vm["config-file"].as<std::string>());
+    } catch (const YAML::Exception& e) {
+        cout << "can't read config file: " << e.what() << endl;
+        return 1;
+    }
+
+    auto res = srv.start();
+    if (res == service::failed) {
+        log().error("couldn't start service");
+        return 1;
+    }
+    if (res == service::parent) {
+        return 0;
+    }
+
+    restapi::api_server server(cfg.api_http_address, cfg.api_http_port, cfg.api_threads);
+    auto router = server.get_router();
+    setup_api_routes(router);
+
+    thread api_thread([&server] {
+        server.run();
+    });
+
+    log().info("service started");
+    srv.wait();
+    log().info("stopping REST API server...");
+    server.stop();
+    api_thread.join();
+    log().info("stopped");
+    return 0;
+}
+
+int main(int argc, char** argv) {
+    po::options_description cmdline_visible("Command line options");
+    cmdline_visible.add_options()
+        ("help", "produce help message")
+        ("config-file", po::value<std::string>()->default_value("cmserver.yaml"), "config file");
+
+    po::options_description cmdline_hidden("Hidden options");
+    cmdline_hidden.add_options()
+        ("action", "action");
+
+    po::options_description cmdline_options("All options");
+    cmdline_options.add(cmdline_visible).add(cmdline_hidden);
+
+    po::positional_options_description p;
+    p.add("action", 1);
+
+    po::variables_map vm;
+    try {
+        po::store(po::command_line_parser(argc, argv).options(cmdline_options).positional(p).run(), vm);
+        po::notify(vm);
+    } catch (po::error& e) {
+        cout << e.what() << endl;
+        return 1;
+    }
+
+    if (vm.count("help") || !vm.count("action")) {
+        cout << "Usage: cmserver <action> [OPTIONS]" << endl;
+        cout << "Actions: start, stop" << endl;
+        cout << cmdline_visible << endl;
+        return 0;
+    }
+
+    auto action = vm["action"].as<std::string>();
+    std::vector<std::string> actions{"start", "stop"};
+    if (boost::find(actions, action) == actions.end()) {
+        cout << "Unknown action. Use [start|stop]" << endl;
+        return 1;
+    }
+
+    service::service srv("/var/run/cmservice.pid");
+
+    if (action == "start") {
+        return on_start(vm, srv);
+    } else if (action == "stop") {
         srv.stop();
-        return 0;
-    } else if (cmd == "status") {
-        // pid_t pid = pid_file.get_pid();
-        // if (pid == 0) {
-        //     msg("not started");
-        // } else if (kill(pid, 0) == 0){
-        //     msg("started");
-        // } else {
-        //     msg("not started but pid file exists");
-        // }
-        return 0;
-    } else {
-        cout << "Unknown command. Use [start|stop]" << endl;
-        return 2;
     }
     return 0;
 }

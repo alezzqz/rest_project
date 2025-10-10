@@ -62,7 +62,7 @@ void service::stop() {
 
         for (int i = 0; i < 10; ++i) {
             if (kill(pid, 0) != 0) {
-                log().info("stopped");
+                log().info("service process stopped");
                 stopped = true;
                 break;
             }

@@ -11,14 +11,14 @@ extern logger::logger& log();
 
 class http_session : public std::enable_shared_from_this<http_session> {
 private:
-    tcp::socket socket_;
-    beast::flat_buffer buffer_;
-    http::request<http::string_body> req_;
-    std::shared_ptr<api_router> router_;
+    tcp::socket _socket;
+    beast::flat_buffer _buffer;
+    http::request<http::string_body> _req;
+    std::shared_ptr<api_router> _router;
 
 public:
     http_session(tcp::socket socket, std::shared_ptr<api_router> router)
-        : socket_(std::move(socket)), router_(router) {}
+        : _socket(std::move(socket)), _router(router) {}
 
     void start() {
         do_read();
@@ -26,10 +26,10 @@ public:
 
 private:
     void do_read() {
-        req_ = {};
-        buffer_.consume(buffer_.size());
+        _req = {};
+        _buffer.consume(_buffer.size());
 
-        http::async_read(socket_, buffer_, req_,
+        http::async_read(_socket, _buffer, _req,
             beast::bind_front_handler(
                 &http_session::on_read,
                 shared_from_this()));
@@ -51,7 +51,7 @@ private:
 
     void request_handler() {
         try {
-            auto response = router_->request_handler(std::move(req_));
+            auto response = _router->request_handler(std::move(_req));
             do_write(response);
         } catch (const std::exception& e) {
             log().error("Request handling error: {}", e.what());
@@ -69,7 +69,7 @@ private:
     void do_write(std::shared_ptr<http::response<http::string_body>> response) {
         auto self = shared_from_this();
 
-        http::async_write(socket_, *response,
+        http::async_write(_socket, *response,
             [self, response](beast::error_code ec, std::size_t bytes_transferred) {
                 self->on_write(ec, bytes_transferred, response->need_eof());
             });
@@ -91,7 +91,7 @@ private:
 
     void do_close() {
         beast::error_code ec;
-        socket_.shutdown(tcp::socket::shutdown_send, ec);
+        _socket.shutdown(tcp::socket::shutdown_send, ec);
         // ignore errors on close
     }
 };
@@ -136,6 +136,7 @@ api_server::~api_server() {
 }
 
 void api_server::run() {
+    log().info("starting REST API server...");
     start_accept();
     
     _threads.reserve(_thread_count);
@@ -152,6 +153,7 @@ void api_server::run() {
             thread.join();
         }
     }
+    log().info("REST API server stopped");
 }
 
 void api_server::stop() {
