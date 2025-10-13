@@ -1,5 +1,5 @@
 [Unit]
-Description=Test Cluster Manager service
+Description=Cluster Manager Server service
 
 [Service]
 Type=forking

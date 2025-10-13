@@ -5,6 +5,7 @@ project(cm)
 add_subdirectory(logger)
 add_subdirectory(service)
 add_subdirectory(restapi)
+add_subdirectory(agent)
 add_subdirectory(server)
 
 target_include_directories(logger PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
