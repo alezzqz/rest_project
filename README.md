@@ -1,6 +1,11 @@
 # rest_project
 test basic rest api server
 
+## Install dependencies
+
+1. boost 1.74 minimum
+2. yaml-cpp library
+
 ## Building and installing
 
 1. go to the project root folder
