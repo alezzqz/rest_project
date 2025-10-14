@@ -22,7 +22,7 @@ void msg(const char* msg) {
 }
 
 void setup_api_routes(std::shared_ptr<restapi::api_router> router) {
-    router->add_route(boost::beast::http::verb::get, "/api",
+    router->add_route(boost::beast::http::verb::get, "/api/backup",
             [](const auto& req, const auto& match) {
                 auto resp = std::make_shared<boost::beast::http::response<boost::beast::http::string_body>>();
                 resp->version(11);
@@ -30,7 +30,7 @@ void setup_api_routes(std::shared_ptr<restapi::api_router> router) {
                 resp->set(boost::beast::http::field::server, "Boost REST Agent");
                 resp->set(boost::beast::http::field::content_type, "text/plain");
                 resp->set(boost::beast::http::field::access_control_allow_origin, "*");
-                resp->body() = "response";
+                resp->body() = "backup agent response";
                 resp->prepare_payload();
                 return resp;
             });
